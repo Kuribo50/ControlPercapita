@@ -1,6 +1,7 @@
 ---
 // src/layouts/Layout.astro
 import Navbar from '../components/layout/Navbar.jsx';
+import SidebarLayout from './SidebarLayout.astro';
 import '../styles/global.css';
 
 export interface Props {
@@ -21,6 +22,7 @@ const year = new Date().getFullYear();
   </head>
   <body class="h-full flex flex-col">
     <!-- navbar -->
+     
     <header class="w-full">
       <Navbar
         client:load
@@ -32,7 +34,6 @@ const year = new Date().getFullYear();
         }}
       />
     </header>
-
     <!-- CONTENEDOR ESTÁNDAR: -->
     <main class="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <slot />

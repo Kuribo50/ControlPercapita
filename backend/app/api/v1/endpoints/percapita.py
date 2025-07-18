@@ -71,25 +71,27 @@ async def get_dashboard(
         )
 
 # Archivos
-@router.post("/preview-csv", response_model=ArchivoPreview)
+# backend/app/api/v1/endpoints/percapita.py (actualizar)
+
+@router.post("/preview-csv")
 async def preview_csv_file(
     file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Analizar archivo antes de subirlo"""
+    """Analizar archivo antes de subirlo con detección de duplicados"""
     try:
-        # Validar tipo de archivo
+        # Validaciones básicas
         if not file.filename.lower().endswith(('.csv', '.txt', '.xls', '.xlsx')):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Formato de archivo no soportado"
+                detail="Formato de archivo no soportado. Use CSV, TXT, XLS o XLSX."
             )
         
-        # Validar tamaño
         if file.size and file.size > settings.MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Archivo demasiado grande"
+                detail=f"Archivo demasiado grande. Máximo permitido: {settings.MAX_FILE_SIZE/1024/1024:.1f}MB"
             )
         
         # Guardar archivo temporal
@@ -101,7 +103,22 @@ async def preview_csv_file(
         try:
             # Procesar archivo
             preview_data = FonasaProcessor.preview_fonasa_file(tmp_file_path)
-            return ArchivoPreview(**preview_data)
+            
+            # Verificar duplicados si se detectó fecha de corte
+            if preview_data.get('fecha_corte_detectada') and preview_data.get('validacion_ok'):
+                establecimiento_principal = preview_data.get('establecimientos_detectados', {}).get('establecimiento_principal')
+                codigo_establecimiento = establecimiento_principal.get('codigo') if establecimiento_principal else None
+                
+                duplicado = await FonasaProcessor.check_duplicate_corte(
+                    session, 
+                    preview_data['fecha_corte_detectada'],
+                    codigo_establecimiento
+                )
+                
+                if duplicado:
+                    preview_data['duplicado_detectado'] = duplicado
+            
+            return preview_data
             
         finally:
             # Limpiar archivo temporal
@@ -118,11 +135,13 @@ async def preview_csv_file(
 async def upload_csv_file(
     file: UploadFile = File(...),
     fecha_corte: Optional[str] = Form(None),
+    establecimiento: Optional[str] = Form(None),
     sustituir_archivo_id: Optional[str] = Form(None),
+    confirmar_duplicado: bool = Form(False),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ):
-    """Subir y procesar archivo FONASA"""
+    """Subir y procesar archivo FONASA con manejo de duplicados"""
     try:
         # Validaciones básicas
         if not file.filename.lower().endswith(('.csv', '.txt', '.xls', '.xlsx')):
@@ -131,36 +150,98 @@ async def upload_csv_file(
                 detail="Formato de archivo no soportado"
             )
         
-        # Guardar archivo
+        # Crear directorio de uploads
         upload_dir = os.path.join(settings.UPLOAD_FOLDER, "fonasa")
         os.makedirs(upload_dir, exist_ok=True)
         
-        file_path = os.path.join(upload_dir, f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+        # Generar nombre único para el archivo
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        file_extension = Path(file.filename).suffix
+        unique_filename = f"{timestamp}_{file.filename}"
+        file_path = os.path.join(upload_dir, unique_filename)
         
+        # Guardar archivo
         with open(file_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
         
-        # Procesar archivo
+        # Analizar archivo
         preview_data = FonasaProcessor.preview_fonasa_file(file_path)
         
+        if not preview_data.get('validacion_ok'):
+            os.unlink(file_path)  # Limpiar archivo inválido
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Archivo inválido: {preview_data.get('error', 'Formato no reconocido')}"
+            )
+        
+        # Usar fecha y establecimiento detectados o los proporcionados
+        fecha_corte_final = fecha_corte or preview_data.get('fecha_corte_detectada')
+        establecimiento_detectado = preview_data.get('establecimientos_detectados', {}).get('establecimiento_principal')
+        establecimiento_final = establecimiento or (establecimiento_detectado.get('nombre_identificado') if establecimiento_detectado else None)
+        
+        if not fecha_corte_final:
+            os.unlink(file_path)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pudo detectar la fecha de corte. Por favor especifíquela manualmente."
+            )
+        
+        # Verificar duplicados si no se confirmó
+        if not confirmar_duplicado:
+            codigo_establecimiento = establecimiento_detectado.get('codigo') if establecimiento_detectado else None
+            duplicado = await FonasaProcessor.check_duplicate_corte(
+                session, 
+                fecha_corte_final,
+                codigo_establecimiento
+            )
+            
+            if duplicado:
+                os.unlink(file_path)  # Limpiar archivo temporalmente
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "message": "Ya existe un corte para esta fecha y establecimiento",
+                        "duplicado_info": duplicado,
+                        "requiere_confirmacion": True
+                    }
+                )
+        
+        # Si hay que sustituir archivo existente
+        if sustituir_archivo_id:
+            # Marcar archivo anterior como inactivo
+            query = select(Archivo).where(Archivo.id == sustituir_archivo_id)
+            result = await session.execute(query)
+            archivo_anterior = result.scalar_one_or_none()
+            
+            if archivo_anterior:
+                archivo_anterior.is_active = False
+                await session.commit()
+        
         # Crear registro de archivo
+        metadata = {
+            'establecimientos_detectados': preview_data.get('establecimientos_detectados'),
+            'casos_detectados': preview_data.get('casos_detectados'),
+            'estadisticas': preview_data.get('estadisticas'),
+            'establecimiento_procesamiento': establecimiento_final
+        }
+        
         archivo = Archivo(
             filename=file.filename,
-            formato=FonasaProcessor._detect_file_format(file_path),
-            fecha_corte=date.fromisoformat(fecha_corte) if fecha_corte else preview_data.get('fecha_corte_detectada'),
+            unique_filename=unique_filename,
+            formato=preview_data.get('formato'),
+            fecha_corte=date.fromisoformat(fecha_corte_final),
             total_registros=preview_data.get('total_registros', 0),
             path_archivo=file_path,
-            casos_detectados=preview_data.get('casos_detectados'),
-            columnas_detectadas=preview_data.get('columnas_detectadas'),
-            fecha_corte_detectada=preview_data.get('fecha_corte_detectada')
+            metadata=metadata,
+            user_id=current_user.id
         )
         
         session.add(archivo)
         await session.commit()
         await session.refresh(archivo)
         
-        # Procesar registros en segundo plano (aquí simplificado)
+        # Procesar registros (esto puede hacerse en segundo plano)
         resultado_procesamiento = await FonasaProcessor.process_and_save_fonasa_file(
             file_path, str(archivo.id), session
         )
@@ -170,20 +251,33 @@ async def upload_csv_file(
             archivo.nuevos_inscritos = resultado_procesamiento.get('nuevos_inscritos', 0)
             archivo.rechazos_previsionales = resultado_procesamiento.get('rechazos_previsionales', 0)
             archivo.traslados_negativos = resultado_procesamiento.get('traslados_negativos', 0)
+            archivo.estado_procesamiento = 'completado'
+            await session.commit()
+        else:
+            archivo.estado_procesamiento = 'error'
             await session.commit()
         
         return {
             "success": True,
             "archivo_id": str(archivo.id),
+            "filename": archivo.filename,
             "fecha_corte": archivo.fecha_corte.isoformat(),
+            "establecimiento": establecimiento_final,
             "total_registros": archivo.total_registros,
-            "nuevos_inscritos": archivo.nuevos_inscritos,
-            "rechazos_previsionales": archivo.rechazos_previsionales,
-            "traslados_negativos": archivo.traslados_negativos
+            "nuevos_inscritos": archivo.nuevos_inscritos or 0,
+            "rechazos_previsionales": archivo.rechazos_previsionales or 0,
+            "traslados_negativos": archivo.traslados_negativos or 0,
+            "casos_detectados": preview_data.get('casos_detectados'),
+            "estadisticas": preview_data.get('estadisticas')
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error subiendo archivo: {str(e)}")
+        logger.error(f"Error procesando archivo: {str(e)}")
+        # Limpiar archivo si existe
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.unlink(file_path)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error procesando archivo: {str(e)}"
@@ -196,90 +290,77 @@ async def get_archivos_procesados(
 ):
     """Obtener lista de archivos procesados"""
     try:
-        from sqlalchemy import select
+        query = select(Archivo).where(
+            Archivo.is_active == True
+        ).order_by(Archivo.created_at.desc())
         
-        query = select(Archivo).where(Archivo.is_active == True).order_by(Archivo.created_at.desc())
         result = await session.execute(query)
         archivos = result.scalars().all()
         
+        archivos_data = []
+        for archivo in archivos:
+            metadata = archivo.metadata or {}
+            establecimientos = metadata.get('establecimientos_detectados', {})
+            establecimiento_principal = establecimientos.get('establecimiento_principal', {})
+            
+            archivos_data.append({
+                "id": str(archivo.id),
+                "filename": archivo.filename,
+                "formato": archivo.formato,
+                "fecha_corte": archivo.fecha_corte.isoformat(),
+                "fecha_procesamiento": archivo.created_at.isoformat(),
+                "total_registros": archivo.total_registros,
+                "nuevos_inscritos": archivo.nuevos_inscritos or 0,
+                "rechazos_previsionales": archivo.rechazos_previsionales or 0,
+                "traslados_negativos": archivo.traslados_negativos or 0,
+                "estado_procesamiento": archivo.estado_procesamiento or 'pendiente',
+                "establecimiento": establecimiento_principal.get('nombre_identificado') or establecimiento_principal.get('nombre'),
+                "codigo_establecimiento": establecimiento_principal.get('codigo')
+            })
+        
         return {
-            "archivos": [
-                ArchivoResponse(
-                    id=archivo.id,
-                    filename=archivo.filename,
-                    formato=archivo.formato,
-                    fecha_corte=archivo.fecha_corte,
-                    total_registros=archivo.total_registros,
-                    nuevos_inscritos=archivo.nuevos_inscritos,
-                    rechazos_previsionales=archivo.rechazos_previsionales,
-                    traslados_negativos=archivo.traslados_negativos,
-                    casos_detectados=archivo.casos_detectados,
-                    created_at=archivo.created_at.isoformat()
-                )
-                for archivo in archivos
-            ]
+            "archivos": archivos_data,
+            "total": len(archivos_data)
         }
         
     except Exception as e:
-        logger.error(f"Error obteniendo archivos: {str(e)}")
+        logger.error(f"Error obteniendo archivos procesados: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error obteniendo archivos"
-)
+            detail="Error obteniendo archivos procesados"
+        )
+
 @router.delete("/archivos-procesados/{archivo_id}")
 async def delete_archivo(
-archivo_id: str,
-session: AsyncSession = Depends(get_async_session),
-current_user: User = Depends(get_current_user)
+    archivo_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
 ):
- usuario = UsuarioNuevo(
-            fecha=usuario_data.fecha,
-            run=usuario_data.run,
-            nombre_usuario=usuario_data.nombre,
-            nacionalidad=usuario_data.nacionalidad,
-            etnia=usuario_data.etnia,
-            sector=usuario_data.sector,
-            subsector=usuario_data.subsector,
-            cod_percapita=usuario_data.cod_percapita,
-            validado_en_siis=usuario_data.validado_en_siis,
-            establecimiento=usuario_data.establecimiento,
-            observacion=usuario_data.observacion
+    try:
+        # Buscar el archivo
+        result = await session.execute(
+            select(Archivo).where(Archivo.id == archivo_id)
         )
+        archivo = result.scalars().first()
         
-        session.add(usuario)
-        await session.commit()
-        await session.refresh(usuario)
+        if not archivo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Archivo no encontrado"
+            )
         
-        # Validar contra FONASA
-        estado_validacion = await UsuarioValidator.validate_usuario_against_fonasa(
-            usuario, session
-        )
-        usuario.estado_validacion = estado_validacion
+        # Eliminar el archivo
+        await session.delete(archivo)
         await session.commit()
         
-        return UsuarioNuevoResponse(
-            id=usuario.id,
-            fecha=usuario.fecha,
-            run=usuario.run,
-            nombre=usuario.nombre_usuario,
-            nacionalidad=usuario.nacionalidad,
-            etnia=usuario.etnia,
-            sector=usuario.sector,
-            subsector=usuario.subsector,
-            cod_percapita=usuario.cod_percapita,
-            validado_en_siis=usuario.validado_en_siis,
-            establecimiento=usuario.establecimiento,
-            observacion=usuario.observacion,
-            estado_validacion=usuario.estado_validacion,
-            created_at=usuario.created_at.isoformat()
-        )
+        return {"message": "Archivo eliminado correctamente"}
         
     except Exception as e:
         await session.rollback()
-        logger.error(f"Error creando usuario: {str(e)}")
+        logger.error(f"Error eliminando archivo: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error creando usuario: {str(e)}"
+            detail=f"Error eliminando archivo: {str(e)}"
         )
 
 @router.get("/usuarios-nuevos")
