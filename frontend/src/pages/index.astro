@@ -1,0 +1,9 @@
+---
+// src/pages/index.astro
+import Layout        from '../layouts/Layout.astro';
+import DashboardMain from '../components/dashboard/DashboardMain.jsx';
+---
+
+<Layout title="Inicio — Dashboard" currentPage="dashboard">
+  <DashboardMain client:load />
+</Layout>

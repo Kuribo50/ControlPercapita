@@ -1,0 +1,46 @@
+---
+// src/layouts/Layout.astro
+import Navbar from '../components/layout/Navbar.jsx';
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  currentPage: string;
+}
+const { title, currentPage } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{title}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../styles/global.css" />
+  </head>
+  <body class="h-full flex flex-col">
+    <!-- navbar -->
+    <header class="w-full">
+      <Navbar
+        client:load
+        currentPage={currentPage}
+        user={{ name: 'Dr. Juan Pérez', email: 'juan.perez@cesafam.cl', role: 'PERCAPITA' }}
+        onLogout={() => {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }}
+      />
+    </header>
+
+    <!-- CONTENEDOR ESTÁNDAR: -->
+    <main class="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <slot />
+    </main>
+
+    <!-- footer -->
+    <footer class="bg-white border-t border-slate-200 text-center text-xs sm:text-sm text-slate-500 py-6">
+      © {year} Dirección de Salud Municipal de Tomé — Sistema Percápita
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+---
+// src/pages/review-cases.astro
+import Layout               from '../layouts/Layout.astro';
+import UsersByStatusTable   from '../components/review-cases/UsersByStatusTable.jsx';
+---
+
+<Layout title="Usuarios Nuevos — Demo" currentPage="review-cases">
+  <div class="p-6 bg-slate-50 min-h-screen">
+    <h1 class="text-3xl font-bold mb-8">Demo: Usuarios Nuevos Agrupados</h1>
+    <UsersByStatusTable demo client:load />
+  </div>
+</Layout>

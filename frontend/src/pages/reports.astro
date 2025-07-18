@@ -1,0 +1,11 @@
+---
+// src/pages/reports.astro
+import Layout from '../layouts/Layout.astro';
+import ReportsMain from '../components/reports/ReportsMain.jsx';
+import Navbar from '../components/layout/Navbar.jsx';
+
+---
+
+<Layout title="Reportes — Sistema Percápita" currentPage="reports">
+  <ReportsMain client:load />
+</Layout>

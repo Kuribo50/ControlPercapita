@@ -1,0 +1,9 @@
+---
+// src/pages/new-users.astro
+import Layout       from '../layouts/Layout.astro';
+import NewUsersMain from '../components/new-users/NewUsersMain.jsx';
+---
+
+<Layout title="Usuarios Nuevos — Sistema Percápita" currentPage="new-users">
+  <NewUsersMain client:load />
+</Layout>
