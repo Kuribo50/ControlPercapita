@@ -153,6 +153,7 @@ const getColorClasses = (color: string, active: boolean) => {
   const colorConfig = colorMap[color as keyof typeof colorMap] || colorMap.blue;
   return active ? colorConfig.active : colorConfig.inactive;
 };
+
 // ==================== COMPONENTES ====================
 function SidebarLink({
   item,
