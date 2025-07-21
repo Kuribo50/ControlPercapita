@@ -1,0 +1,10 @@
+Django>=5.2,<5.3
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+python-decouple
+django-cors-headers
+django-filter
+drf-yasg
+pandas
+openpyxl   # leer .xlsx
