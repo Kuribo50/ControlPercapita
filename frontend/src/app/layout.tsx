@@ -1,28 +1,33 @@
 // src/app/layout.tsx
-import './globals.css'
-import { ReactNode } from 'react'
-import { Sidebar } from './components/layout/Sidebar'
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import Navbar from './components/layout/Navbar';
+import { Sidebar } from './components/layout/Sidebar';
 
-export const metadata = {
-  title: 'Sistema Percápita',
-  description: 'Dashboard y herramientas de gestión',
-}
+const inter = Inter({ subsets: ['latin'] });
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: 'Sistema Percápita - CESFAM',
+  description: 'Sistema de gestión de usuarios FONASA',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="es">
-      <head />
-      <body>
-        <div className="flex h-screen overflow-hidden">
-          {/* Sidebar fijo */}
+      <body className={inter.className}>
+        <div className="flex h-screen">
           <Sidebar />
-
-          {/* Contenedor principal */}
-          <main className="flex-1 overflow-auto p-6">
+          <main className="flex-1 overflow-auto">
+            <Navbar />
             {children}
           </main>
         </div>
       </body>
     </html>
-  )
+  );
 }

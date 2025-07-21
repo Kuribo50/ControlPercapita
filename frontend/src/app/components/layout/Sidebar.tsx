@@ -22,14 +22,12 @@ import {
   HiArrowPath,
   HiCog8Tooth,
   HiQuestionMarkCircle,
-  
   // Iconos de control
   HiChevronLeft,
   HiChevronRight,
   HiChevronDown,
   HiBars3,
   HiXMark,
-  
   // Iconos especiales
   HiHeart,
   HiOutlineViewColumns,
@@ -57,9 +55,9 @@ interface MenuSectionDef {
 // ==================== CONFIGURACIÓN DE DATOS ====================
 const inicioItems: LinkItem[] = [
   { 
-    id: 'dashboard', 
-    href: '/dashboard', 
-    label: 'Dashboard', 
+    id: 'home', 
+    href: '/page/Home', 
+    label: 'Inicio', 
     icon: HiHome 
   }
 ];
@@ -69,61 +67,60 @@ const nestedSections: MenuSectionDef[] = [
     title: 'Percápita',
     color: 'emerald',
     items: [
-      { id: 'verificar-perfil', href: '/verificar-perfil', label: 'Verificar Perfil', icon: HiMagnifyingGlass },
-      { id: 'revisar-codigos', href: '/revisar-codigos', label: 'Revisar Códigos', icon: HiOutlineQrCode },
-      { id: 'casos-revision', href: '/casos-revision', label: 'Casos a Revisar', icon: HiDocumentText, badge: 5 },
-      { id: 'nuevos-usuarios', href: '/usuarios-nuevos', label: 'Nuevos Usuarios', icon: HiOutlineUser, badge: 12 },
-      { id: 'no-validados', href: '/no-validados', label: 'No Validados', icon: HiXCircle },
-      { id: 'validados', href: '/validados', label: 'Validados', icon: HiCheckCircle },
+      { id: 'verificar-perfil', href: '/page/verificar-perfil', label: 'Verificar Perfil', icon: HiMagnifyingGlass },
+      { id: 'revisar-codigos', href: '/page/revisar-codigos', label: 'Revisar Códigos', icon: HiOutlineQrCode },
+      { id: 'casos-revision', href: '/page/casos-revision', label: 'Casos a Revisar', icon: HiDocumentText, badge: 5 },
+      { id: 'nuevos-usuarios', href: '/page/usuarios-nuevos', label: 'Nuevos Usuarios', icon: HiOutlineUser, badge: 12 },
+      { id: 'no-validados', href: '/page/no-validados', label: 'No Validados', icon: HiXCircle },
+      { id: 'validados', href: '/page/validados', label: 'Validados', icon: HiCheckCircle },
     ]
   },
   {
     title: 'Afiliaciones',
     color: 'purple',
     items: [
-      { id: 'desafiliaciones', href: '/desafiliaciones', label: 'Desafiliaciones', icon: HiOutlineUser },
-      { id: 'inscripcion-migrantes', href: '/inscripcion-migrantes', label: 'Inscripción Migrantes', icon: HiOutlineUser },
-      { id: 'traslado-sector', href: '/traslado-sector', label: 'Traslado de Sector', icon: HiArrowsRightLeft },
-      { id: 'traslado-centro', href: '/traslado-centro', label: 'Traslado de Centro', icon: HiArrowsRightLeft },
+      { id: 'desafiliaciones', href: '/page/desafiliaciones', label: 'Desafiliaciones', icon: HiOutlineUser },
+      { id: 'inscripcion-migrantes', href: '/page/inscripcion-migrantes', label: 'Inscripción Migrantes', icon: HiOutlineUser },
+      { id: 'traslado-sector', href: '/page/traslado-sector', label: 'Traslado de Sector', icon: HiArrowsRightLeft },
+      { id: 'traslado-centro', href: '/page/traslado-centro', label: 'Traslado de Centro', icon: HiArrowsRightLeft },
     ]
   },
   {
     title: 'Certificados y Reportes',
     color: 'blue',
     items: [
-      { id: 'certificados-residencia', href: '/certificados-residencia', label: 'Certificados de Residencia', icon: HiDocument },
-      { id: 'certificado-inscripcion', href: '/certificado-inscripcion', label: 'Certificado de Inscripción', icon: HiDocument },
-      { id: 'exportar', href: '/exportar', label: 'Exportar', icon: HiArrowDownTray },
+      { id: 'certificados-residencia', href: '/page/certificados-residencia', label: 'Certificados de Residencia', icon: HiDocument },
+      { id: 'certificado-inscripcion', href: '/page/certificado-inscripcion', label: 'Certificado de Inscripción', icon: HiDocument },
+      { id: 'exportar', href: '/page/exportar', label: 'Exportar', icon: HiArrowDownTray },
     ]
   },
   {
     title: 'Otros Trámites',
     color: 'amber',
     items: [
-      { id: 'carencias', href: '/carencias', label: 'Carencias', icon: HiClock },
-      { id: 'renuncias', href: '/renuncias', label: 'Renuncias', icon: HiArrowRightOnRectangle },
-      { id: 'renovaciones-nip', href: '/renovaciones-nip', label: 'Renovaciones NIP', icon: HiArrowPath },
+      { id: 'carencias', href: '/page/carencias', label: 'Carencias', icon: HiClock },
+      { id: 'renuncias', href: '/page/renuncias', label: 'Renuncias', icon: HiArrowRightOnRectangle },
+      { id: 'renovaciones-nip', href: '/page/renovaciones-nip', label: 'Renovaciones NIP', icon: HiArrowPath },
     ]
   },
   {
     title: 'Gestión de Cortes',
     color: 'rose',
     items: [
-      { id: 'subir-cortes', href: '/subir-cortes', label: 'Subir Cortes', icon: HiCloudArrowUp },
-      { id: 'ver-cortes', href: '/ver-cortes', label: 'Ver Cortes', icon: HiEye },
-      { id: 'administrar-usuarios', href: '/administrar-usuarios', label: 'Administrar Usuarios', icon: HiUsers },
+      { id: 'subir-cortes', href: '/page/subir-cortes', label: 'Subir Cortes', icon: HiCloudArrowUp },
+      { id: 'ver-cortes', href: '/page/ver-cortes', label: 'Ver Cortes', icon: HiEye },
+      { id: 'administrar-usuarios', href: '/page/administrar-usuarios', label: 'Administrar Usuarios', icon: HiUsers },
     ]
   },
   {
     title: 'Configuración',
     color: 'slate',
     items: [
-      { id: 'configuracion', href: '/configuracion', label: 'Configuración', icon: HiCog8Tooth },
-      { id: 'ayuda', href: '/ayuda', label: 'Ayuda', icon: HiQuestionMarkCircle },
+      { id: 'configuracion', href: '/page/configuracion', label: 'Configuración', icon: HiCog8Tooth },
+      { id: 'ayuda', href: '/page/ayuda', label: 'Ayuda', icon: HiQuestionMarkCircle },
     ]
   }
 ];
-
 // ==================== UTILIDADES ====================
 const getColorClasses = (color: string, active: boolean) => {
   const colorMap = {
@@ -156,7 +153,6 @@ const getColorClasses = (color: string, active: boolean) => {
   const colorConfig = colorMap[color as keyof typeof colorMap] || colorMap.blue;
   return active ? colorConfig.active : colorConfig.inactive;
 };
-
 // ==================== COMPONENTES ====================
 function SidebarLink({
   item,
