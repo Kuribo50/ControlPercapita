@@ -1,64 +1,128 @@
-// src/components/dashboard/StatsCard.tsx
-interface StatsCardProps {
-    title: string;
-    value: number | string;
-    icon: React.ReactNode;
-    trend?: 'up' | 'down' | 'neutral';
-    trendValue?: string;
-    color: 'green' | 'red' | 'blue' | 'yellow';
-    loading?: boolean;
-  }
-  
-  export function StatsCard({ 
-    title, 
-    value, 
-    icon, 
-    trend, 
-    trendValue, 
-    color,
-    loading = false 
-  }: StatsCardProps) {
-    const colorVariants = {
-      green: 'from-green-200 to-green-50 text-green-900 text-green-700',
-      red: 'from-red-200 to-red-50 text-red-900 text-red-700',
-      blue: 'from-blue-200 to-blue-50 text-blue-900 text-blue-700',
-      yellow: 'from-yellow-200 to-yellow-50 text-yellow-900 text-yellow-700'
-    };
-  
-    const [bgGradient, titleColor, valueColor] = colorVariants[color].split(' ');
-  
-    if (loading) {
-      return (
-        <div className={`bg-gradient-to-br ${bgGradient} p-8 rounded-2xl shadow-lg animate-pulse`}>
-          <div className="h-6 bg-white/30 rounded mb-4"></div>
-          <div className="h-12 bg-white/30 rounded"></div>
-        </div>
-      );
+// src/app/components/dashboard/StatsCard.tsx (corregir nombre también)
+"use client";
+
+import { 
+  MdPeople, 
+  MdPersonAdd, 
+  MdBlock, 
+  MdSwapHoriz, 
+  MdAssignment,
+  MdTrendingUp,
+  MdCheckCircle,
+  MdError
+} from 'react-icons/md';
+
+interface Stats {
+  total: number;
+  aceptados: number;
+  rechazados: number;
+  nuevosInscritos: number;
+  rechazosPrevisionales: number;
+  trasladosNegativos: number;
+  pendientesRevision: number;
+}
+
+interface StatsCardsProps {
+  stats: Stats;
+  loading: boolean;
+}
+
+export function StatsCards({ stats, loading }: StatsCardsProps) {
+  const cards = [
+    {
+      title: 'Total Usuarios',
+      value: stats.total,
+      icon: MdPeople,
+      color: 'bg-blue-500',
+      bgColor: 'bg-blue-50',
+      textColor: 'text-blue-700',
+      change: '+5.2%',
+      trend: 'up'
+    },
+    {
+      title: 'Aceptados',
+      value: stats.aceptados,
+      icon: MdCheckCircle,
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-700',
+      change: `${stats.total > 0 ? Math.round((stats.aceptados / stats.total) * 100) : 0}%`,
+      trend: 'up'
+    },
+    {
+      title: 'Nuevos Inscritos',
+      value: stats.nuevosInscritos,
+      icon: MdPersonAdd,
+      color: 'bg-purple-500',
+      bgColor: 'bg-purple-50',
+      textColor: 'text-purple-700',
+      change: '+12.5%',
+      trend: 'up'
+    },
+    {
+      title: 'Rechazos Previsionales',
+      value: stats.rechazosPrevisionales,
+      icon: MdBlock,
+      color: 'bg-red-500',
+      bgColor: 'bg-red-50',
+      textColor: 'text-red-700',
+      change: '-8.1%',
+      trend: 'down'
+    },
+    {
+      title: 'Pendientes Revisión',
+      value: stats.pendientesRevision,
+      icon: MdAssignment,
+      color: 'bg-orange-500',
+      bgColor: 'bg-orange-50',
+      textColor: 'text-orange-700',
+      change: '+3.7%',
+      trend: 'up'
     }
-  
+  ];
+
+  if (loading) {
     return (
-      <div className={`bg-gradient-to-br ${bgGradient} p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-2xl font-bold ${titleColor}`}>{title}</h2>
-          <div className="text-3xl opacity-80">{icon}</div>
-        </div>
-        <div className="flex flex-col">
-          <p className={`text-5xl font-extrabold ${valueColor} mb-2`}>
-            {typeof value === 'number' ? value.toLocaleString() : value}
-          </p>
-          {trend && trendValue && (
-            <div className={`flex items-center text-sm ${
-              trend === 'up' ? 'text-green-600' : 
-              trend === 'down' ? 'text-red-600' : 
-              'text-gray-600'
-            }`}>
-              <span className="mr-1">
-                {trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→'}
-              </span>
-              {trendValue}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="animate-pulse space-y-3">
+              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
             </div>
-          )}
-        </div>
+          </div>
+        ))}
       </div>
     );
   }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {cards.map((card, index) => (
+        <div key={index} className={`${card.bgColor} rounded-xl p-6 shadow-sm border transition-all duration-200 hover:shadow-md hover:scale-105 cursor-pointer`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className={`w-12 h-12 ${card.color} rounded-lg flex items-center justify-center`}>
+              <card.icon className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex items-center space-x-1">
+              <MdTrendingUp className={`w-4 h-4 ${card.trend === 'up' ? 'text-green-500' : 'text-red-500 rotate-180'}`} />
+              <span className={`text-xs font-medium ${card.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                {card.change}
+              </span>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className={`text-sm font-medium ${card.textColor} mb-1`}>
+              {card.title}
+            </h3>
+            <p className={`text-2xl font-bold ${card.textColor}`}>
+              {card.value.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

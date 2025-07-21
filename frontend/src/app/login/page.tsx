@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -8,20 +7,52 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
+  const [err,  setErr]  = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Comprueba que la env var esté llegando
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+  console.log("API_URL:", API_URL);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    setErr("");
+    setLoading(true);
+
     try {
-      const { data } = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/token/`,
-        { username: user, password: pass }
+      const response = await axios.post(
+        `${API_URL}/api/token/`,
+        { username: user, password: pass },
+        { timeout: 5000 }
       );
-      localStorage.setItem("token", data.access);
-      router.push("/upload");
-    } catch (error: any) {
-      setErr(error.response.data.detail);
+
+      // response.data puede venir undefined si algo falla en el servidor
+      const token = response.data?.access;
+      if (!token) {
+        throw new Error("No se recibió un token válido del servidor");
+      }
+
+      localStorage.setItem("token", token);
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      console.error(error);
+
+      // Si es un error de Axios, intenta extraer el detalle,
+      // si no, muestra el mensaje genérico
+      if (axios.isAxiosError(error)) {
+        const detail =
+          error.response?.data?.detail ??
+          error.response?.data ??
+          error.message;
+        setErr(String(detail));
+      } else if (error instanceof Error) {
+        setErr(error.message);
+      } else {
+        setErr("Error desconocido");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,8 +62,12 @@ export default function LoginPage() {
         onSubmit={submit}
         className="w-full max-w-md bg-white rounded-lg shadow-lg p-8"
       >
-        <h1 className="text-3xl font-bold mb-6 text-center">Iniciar sesión</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          Iniciar sesión
+        </h1>
+
         {err && <p className="text-red-500 mb-4">{err}</p>}
+
         <label className="block mb-2">Usuario</label>
         <input
           type="text"
@@ -41,6 +76,7 @@ export default function LoginPage() {
           className="w-full border rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
           required
         />
+
         <label className="block mb-2">Contraseña</label>
         <input
           type="password"
@@ -49,11 +85,17 @@ export default function LoginPage() {
           className="w-full border rounded px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-400"
           required
         />
+
         <button
           type="submit"
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 rounded hover:opacity-90 transition"
+          disabled={loading}
+          className={`w-full ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90"
+          } text-white py-2 rounded transition`}
         >
-          Entrar
+          {loading ? "Ingresando..." : "Entrar"}
         </button>
       </form>
     </div>

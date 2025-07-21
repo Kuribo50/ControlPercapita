@@ -1,21 +1,28 @@
-  import './globals.css'
-  import { ReactNode } from 'react'
-  import LayoutWrapper from "./components/LayoutWrapper";
-  import { Sidebar } from "./components/layout/Sidebar";
+// src/app/layout.tsx
+import './globals.css'
+import { ReactNode } from 'react'
+import { Sidebar } from './components/layout/Sidebar'
 
-export default function UploadLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata = {
+  title: 'Sistema Percápita',
+  description: 'Dashboard y herramientas de gestión',
+}
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <Sidebar currentPage="upload" />
-        <main className="flex-1 overflow-hidden">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+    <html lang="es">
+      <head />
+      <body>
+        <div className="flex h-screen overflow-hidden">
+          {/* Sidebar fijo */}
+          <Sidebar />
+
+          {/* Contenedor principal */}
+          <main className="flex-1 overflow-auto p-6">
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
+  )
 }
